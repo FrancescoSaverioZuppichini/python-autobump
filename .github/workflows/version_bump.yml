@@ -18,13 +18,17 @@ jobs:
       - name: Bumping Version
         id: bump_version
         run: |
+          set -e  # Exit immediately if a command exits with a non-zero status
+          echo "Running version bump script..."
           version=$(python scripts/get_autoversion_bump.py src/package1 | tail -n 1)
-          if [ -n "$version" ]; then
-            python scripts/update_version.py src/package1 $version
-            echo "new_version=$version" >> $GITHUB_OUTPUT
-          else
-            echo "No new version needed"
+          if [ -z "$version" ]; then
+            echo "Error: No version returned by get_autoversion_bump.py"
+            exit 1
           fi
+          echo "New version: $version"
+          echo "Updating version..."
+          python scripts/update_version.py src/package1 $version
+          echo "new_version=$version" >> $GITHUB_OUTPUT
 
       - name: Commit and Push Changes
         if: steps.bump_version.outputs.new_version
