@@ -7,6 +7,7 @@ import re
 import subprocess
 import logging
 from argparse import ArgumentParser
+from typing import Tuple
 
 # Commit regex
 new_version_emoji = "🔖"
@@ -22,6 +23,13 @@ logging.basicConfig(
 )
 
 
+Version = Tuple[int, int, int]
+
+
+def format_version(version: Version) -> str:
+    return ".".join([str(el) for el in version])
+
+
 def main():
     parser = ArgumentParser()
     parser.add_argument(
@@ -30,16 +38,53 @@ def main():
         type=Path,
         help="Path to the package you want autoversion.",
     )
+    parser.add_argument(
+        "--version",
+        default=None,
+        type=str,
+        help="Current package version, it not provider we will try to infer it.",
+    )
     args = parser.parse_args()
     src: Path = args.src
     logging.info(f"Getting autoversion for package @{src.absolute()}")
-    version_bump = parseBumpType(args.src)
-    print(version_bump)
+    current_version = args.version
+    if current_version is None:
+        current_version = get_current_version_from_package(args.src)
+    version_bump = parse_bump_type(args.src)
+    logging.info(f"Found version bump = {version_bump}")
+    log_msg = f"Bumping from {format_version(current_version)} ➡️ "
+
+    match version_bump:
+        case "major":
+            current_version[0] += 1
+        case "minor":
+            current_version[1] += 1
+        case "patch":
+            current_version[2] += 1
+
+    log_msg += f"{format_version(current_version)}"
+    logging.info(log_msg)
 
 
-def parseBumpType(src: Path, fail_on_parse: bool = True):
+def get_current_version_from_package(src: Path) -> Version:
+    package_name = src.name
+    logging.info(f"Trying to infer version importing {package_name}")
+    result = subprocess.run(
+        f'cd {src.parent} && python -c "import {package_name};print({package_name}.__version__)"',
+        shell=True,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(f"Error getting version: {result.stderr}")
+
+    return [int(el) for el in result.stdout.strip().split(".")]
+
+
+def parse_bump_type(src: Path, fail_on_parse: bool = True):
     # Fetch the tags for the function
-    tag_command = ["git", "tag", "--list", f"{src}-*", "--sort=-v:refname"]
+    tag_command = ["git", "tag", "--list", f"{src.name}-*", "--sort=-v:refname"]
     tag_result = subprocess.run(tag_command, capture_output=True, text=True)
     logging.info(tag_result)
 
@@ -48,9 +93,9 @@ def parseBumpType(src: Path, fail_on_parse: bool = True):
 
     tags = tag_result.stdout.strip().splitlines()
 
-    # Fetch the commits that affect the function code since the last tag
+    # Fetch the commits that affect the files in src directory since the last tag
     if len(tags) == 0:
-        git_command = ["git", "log", "--oneline", "--", str(src)]
+        git_command = ["git", "log", "--oneline", "--", f"{src}/**"]
     else:
         tag = tags[0]
         git_command = [
@@ -59,10 +104,12 @@ def parseBumpType(src: Path, fail_on_parse: bool = True):
             f"{tag}..HEAD",
             "--oneline",
             "--",
-            f"{src}",
+            f"{src}/**",
         ]
+
+    logging.info(f"Executing git command: {' '.join(git_command)}")
     result = subprocess.run(git_command, capture_output=True, text=True)
-    logging.info(result)
+    logging.info(f"Git command output: {result.stdout}")
 
     if result.returncode != 0:
         raise ValueError(f"Error fetching commits: {result.stderr}")
@@ -77,7 +124,6 @@ def parseBumpType(src: Path, fail_on_parse: bool = True):
     bumpPatch = False
 
     for commit in commits:
-        print(commit)
         commit_message = commit.split(" ", 1)[1]
         if re.match(major, commit_message):
             bumpMajor = True
