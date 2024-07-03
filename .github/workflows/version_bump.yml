@@ -11,6 +11,10 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+        with:
+          # fetch all commits and tags from main
+          fetch-depth: 0
+          ref: main
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
