@@ -77,6 +77,7 @@ def parseBumpType(src: Path, fail_on_parse: bool = True):
     bumpPatch = False
 
     for commit in commits:
+        print(commit)
         commit_message = commit.split(" ", 1)[1]
         if re.match(major, commit_message):
             bumpMajor = True
