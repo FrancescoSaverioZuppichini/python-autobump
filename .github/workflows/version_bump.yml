@@ -26,8 +26,8 @@ jobs:
           echo "Running version bump script..."
           version=$(python scripts/get_new_version.py src/package1 | tail -n 1)
           if [ -z "$version" ]; then
-            echo "Error: No version returned by get_new_version.py"
-            exit 1
+            echo "No version returned by get_new_version.py"
+            exit 0
           fi
           echo "New version: $version"
           echo "Updating version..."
