@@ -1,5 +1,8 @@
 # Python Auto Bump
 
+> [!WARNING]  
+> This is meant for a single package in the repo
+
 ## Motivation
 
 Manually having to change version numbers based on changes is a boring task and very prune to error, this repo aims to give a tempalte to auto bumping your python package to a new version bsaed on the commit history

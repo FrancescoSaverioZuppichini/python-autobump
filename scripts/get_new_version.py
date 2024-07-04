@@ -49,7 +49,8 @@ def get_current_version_from_package(src: Path) -> Version:
 
 def parse_bump_type(src: Path, fail_on_parse: bool = True):
     # Fetch the tags for the function
-    tag_command = ["git", "tag", "--list", f"{src}-*", "--sort=-v:refname"]
+    tag_command = ["git", "tag", "--list", "--sort=-v:refname"]
+    # [NOTE] @fra For monorepo with multiple packages we should filter tags based on `src`
     tag_result = subprocess.run(tag_command, capture_output=True, text=True)
     logging.info(tag_result)
 
@@ -86,14 +87,20 @@ def parse_bump_type(src: Path, fail_on_parse: bool = True):
     bump_minor = False
     bump_patch = False
 
+    used_commit_messages = []
     for commit in commits:
         commit_message = commit.split(" ", 1)[1]
         if re.match(major, commit_message):
+            used_commit_messages.append(commit_message)
             bump_major = True
         elif re.match(minor, commit_message):
+            used_commit_messages.append(commit_message)
             bump_minor = True
         elif re.match(patch, commit_message):
+            used_commit_messages.append(commit_message)
             bump_patch = True
+
+    logging.info(f"Commit messages used:\n {used_commit_messages}")
 
     if bump_major is True:
         return "major"
@@ -146,7 +153,10 @@ def main():
             current_version[1] += 1
         case "patch":
             current_version[2] += 1
-
+        case _:
+            logging.info("No new version needed!")
+            print("")
+            return
     log_msg += f"{format_version(current_version)}"
     logging.info(log_msg)
     print(format_version(current_version))
