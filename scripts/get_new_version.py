@@ -3,7 +3,6 @@
 import logging
 import re
 import subprocess
-import sys
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Tuple
@@ -13,7 +12,7 @@ def is_python_package(src: Path) -> bool:
     return (src / "__init__.py").exists()
 
 
-# Commit regex
+# Commit regex, based on [gitmoji](https://gitmoji.dev/)
 new_version_emoji = "🔖"
 major = r"^[💥]+"
 minor = r"^[✨🏗️♻️⚡️👽️]+"
@@ -26,7 +25,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
-
+# Type to represent a verion, [0,0,0]
 Version = Tuple[int, int, int]
 
 
